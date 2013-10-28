@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-BaseClassifier::BaseClassifier(BaseClassifier::ErrorFunction _type) : type(_type)
+BaseClassifier::BaseClassifier()
 {
 }
 
@@ -10,40 +10,71 @@ void BaseClassifier::run()
 {
 	readData();
 	instances = data.size();
-	features = data[0].first.size();
+	features = data[0].size();
+
 	prepareData();
-	performLearning(true);
+
+	//TODO split into training and testing
+	instances -= int(instances * split);
+	auto beginingOfTestingData = data.begin() + instances;
+	testingData.assign(beginingOfTestingData, data.end());
+	data.resize(instances);
+
 	performLearning();
 }
 
-void BaseClassifier::performLearning(bool findBest)
+void BaseClassifier::performLearning()
 {
-	valarray<double>& hypothesis = findBest ? best : current;
-	hypothesis.resize(features);
+	Hypothesis hypothesis(features), hypothesesSum(features);
+	vector<double> discountFactors{100., 1000., 10000., 100000., 1000000.};
+	vector<Hypothesis> discountedHypotheses(discountFactors.size(), Hypothesis(features));
 
-	unsigned epochsToDo = findBest ? epochsToFindBest : epochs;
-
-	for (unsigned epoch = 1; epoch <= epochsToDo; epoch++) {
+	for (unsigned epoch = 1; epoch <= epochs; epoch++) {
 		for (unsigned i = 0; i < instances; i++) {
-			//cout << best[0] << ' ' << best[1] << ' ' << best[2] << ' ' << best[3] << endl;
-			double prediction = (hypothesis * data[i].first).sum();
-			double desirablePrediction = 2 * data[i].second - 1; //always 1 or -1
+			double prediction = (hypothesis * data[i]).sum();
+			double desirablePrediction = 2 * data[i].y - 1; //always 1 or -1
 
 			double differential = 0.;
-			double cost = getCost(prediction * desirablePrediction, &differential);
+			/*double cost = */getCost(prediction * desirablePrediction, &differential);
 
-			if (!findBest) {
-				//output partial regret
-				double predictionOfBest = (best * data[i].first).sum();
-				double costOfBest = getCost(predictionOfBest * desirablePrediction);
-				cout << cost - costOfBest << endl;
+			double alpha = 2 * sqrt(log(epochs * instances) / (i + epoch * instances));
+
+			hypothesis -= alpha * differential * data[i] * desirablePrediction;
+			regularize(hypothesis);
+
+			hypothesesSum += hypothesis;
+			for (unsigned i= 0; i<discountedHypotheses.size(); i++) {
+				discountedHypotheses[i] = (discountedHypotheses[i] * discountFactors[i] + hypothesis)
+									   / (1 + discountFactors[i]);
 			}
+		}
+		vector<Hypothesis> hypothesesToTest(discountedHypotheses);
+		hypothesesToTest.push_back(hypothesis);
+		hypothesesToTest.push_back(hypothesesSum/double(epoch*instances));
+		performTesting(hypothesesToTest);
+	}
+}
 
-			double alpha = sqrt(8 * log(epochsToDo * instances) / (i + epoch * instances));
-
-			hypothesis -= alpha * differential * data[i].first * desirablePrediction;
+void BaseClassifier::performTesting(vector<Hypothesis> hypotheses)
+{
+	vector<unsigned> boolErrorSum(hypotheses.size());
+	vector<double> learningErrorSum(hypotheses.size());
+	for (unsigned i=0; i<hypotheses.size(); i++) {
+		for (DataRow& row: testingData) {
+			double prediction = (hypotheses[i] * row).sum();
+			double desirablePrediction = 2 * row.y - 1; //always 1 or -1
+			boolErrorSum[i] += (prediction * desirablePrediction < 0);
+			learningErrorSum[i] += getCost(prediction * desirablePrediction);
 		}
 	}
+	for (unsigned& sum: boolErrorSum) {
+		cout << double(sum)/testingData.size() << '\t';
+	}
+	cout << endl;
+	for (double& sum: learningErrorSum) {
+		cout << sum << '\t';
+	}
+	cout << endl;
 }
 
 double BaseClassifier::getCost(double prediction, double *differential) {
@@ -62,35 +93,44 @@ double BaseClassifier::getCost(double prediction, double *differential) {
 	}
 }
 
+void BaseClassifier::regularize(Hypothesis &/*hypotesis*/)
+{
+
+}
+
 void BaseClassifier::prepareData()
 {
 	//mean normalization
-	valarray<double> sum(features);
+	Hypothesis sum(features);
 	for (unsigned i = 0; i!= instances; i++) {
-		sum += data[i].first;
+		sum += data[i];
 	}
-	valarray<double> mean = sum / double(instances);
+	Hypothesis mean = sum / double(instances);
 	mean[0] = 0; // Bias feature
 	for (unsigned i = 0; i!= instances; i++) {
-		data[i].first -= mean;
+		data[i] -= mean;
 	}
 
 	//feature scaling
-	valarray<double> quadraticSum(features);
+	Hypothesis quadraticSum(features);
 	for (unsigned i = 0; i!= instances; i++) {
-		quadraticSum += data[i].first * data[i].first;
+		quadraticSum += data[i] * data[i];
 	}
-	valarray<double> deviation = sqrt(quadraticSum / double(instances));
+	Hypothesis deviation = sqrt(quadraticSum / double(instances));
 	deviation[0] = 1; // Bias feature
 	for (unsigned i = 0; i!= instances; i++) {
-		data[i].first /= deviation;
+		data[i] /= deviation;
 	}
 
 	random_shuffle(data.begin(), data.end());
 }
 
-void BaseClassifier::setEpochs(const unsigned &_epochs, const unsigned &_epochsToFindBest)
+void BaseClassifier::setEpochs(const unsigned &_epochs)
 {
 	epochs = _epochs;
-	epochsToFindBest = _epochsToFindBest;
+}
+
+void BaseClassifier::setErrorType(const BaseClassifier::ErrorFunction &_type)
+{
+	type = _type;
 }

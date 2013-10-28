@@ -4,7 +4,7 @@
 #include <algorithm>
 
 
-IrisClassifier::IrisClassifier(BaseClassifier::ErrorFunction type, IrisClassifier::PositiveClass positiveClass) : BaseClassifier(type)
+IrisClassifier::IrisClassifier(IrisClassifier::PositiveClass positiveClass)
 {
 	switch (positiveClass) {
 	case IRIS_SENTOSA:
@@ -27,13 +27,12 @@ void IrisClassifier::readData()
 	while (in >> line) {
 		replace(line.begin(), line.end(), ',', ' ');
 		istringstream iss(line);
-		valarray<double> row(5);
+		DataRow row(5);
 		string yClass;
-		bool y;
 		row[0] = 1;
 		iss >> row[1] >> row[2] >> row[3] >> row[4] >> yClass;
 
-		y = (yClass == positiveClassName);
-		data.push_back(make_pair(row, y));
+		row.y = (yClass == positiveClassName);
+		data.push_back(row);
 	}
 }

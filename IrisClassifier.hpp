@@ -5,7 +5,7 @@
 
 #include "BaseClassifier.hpp"
 
-class IrisClassifier : public BaseClassifier
+class IrisClassifier : public virtual BaseClassifier
 {
 public:
 	enum PositiveClass {
@@ -13,7 +13,7 @@ public:
 		IRIS_VERSICOLOR, //not linearly separable
 		IRIS_VIRGINICA //not linearly separable
 	};
-	IrisClassifier(ErrorFunction type, PositiveClass positiveClass);
+	IrisClassifier(PositiveClass positiveClass);
 private:
 	void readData();
 	string positiveClassName;
