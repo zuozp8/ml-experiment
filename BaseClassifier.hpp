@@ -30,7 +30,6 @@ public:
 	void setEpochs(const unsigned &epochs);
 	void setErrorType(const ErrorFunction &type);
 	void run();
-
 protected:
 	//Fills data (must create bias feature)
 	virtual void readData() = 0;
@@ -49,7 +48,8 @@ protected:
 
 	//gives cost for certain prediction if positive class was desired
 	//actual prediction should be multiplied by -1 before using this function if negative class was desired
-	double getCost(double prediction, double* differential = nullptr);
+	double getCost(double prediction);
+	double getCostsDifferential(double prediction);
 
 	//override this function to perform projection regularization
 	//regularization may be performed by changing parameter passed by reference

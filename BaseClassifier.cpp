@@ -34,8 +34,7 @@ void BaseClassifier::performLearning()
 			double prediction = (hypothesis * data[i]).sum();
 			double desirablePrediction = 2 * data[i].y - 1; //always 1 or -1
 
-			double differential = 0.;
-			/*double cost = */getCost(prediction * desirablePrediction, &differential);
+			double differential = getCostsDifferential(prediction * desirablePrediction);
 
 			double alpha = 2 * sqrt(log(epochs * instances) / (i + epoch * instances));
 
@@ -77,17 +76,21 @@ void BaseClassifier::performTesting(vector<Hypothesis> hypotheses)
 	cout << endl;
 }
 
-double BaseClassifier::getCost(double prediction, double *differential) {
+double BaseClassifier::getCost(double prediction) {
 	if (type == LOGISTIC_ERROR) {
-		if (differential) {
-			*differential = -1. / (1 + exp(prediction));
-		}
 		return log(1 + exp(-prediction));
 	} else if (type == SVM_ERROR) {
-		if (differential) {
-			*differential = prediction < 1. ? -1. : 0. ;
-		}
 		return max(1 - prediction, 0.);
+	} else {
+		return 0;
+	}
+}
+
+double BaseClassifier::getCostsDifferential(double prediction) {
+	if (type == LOGISTIC_ERROR) {
+		return -1. / (1 + exp(prediction));
+	} else if (type == SVM_ERROR) {
+		return prediction < 1. ? -1. : 0. ;
 	} else {
 		return 0;
 	}
