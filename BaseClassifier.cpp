@@ -20,37 +20,48 @@ void BaseClassifier::run()
 	testingData.assign(beginingOfTestingData, data.end());
 	data.resize(instances);
 
+	tuneAlphaCoefficient();
+
 	performLearning();
 }
 
 void BaseClassifier::performLearning()
 {
 	Hypothesis hypothesis(features), hypothesesSum(features);
-	vector<double> discountFactors{100., 1000., 10000., 100000., 1000000.};
+	vector<double> discountFactors{10000., 100000., 500000.};
 	vector<Hypothesis> discountedHypotheses(discountFactors.size(), Hypothesis(features));
 
-	for (unsigned epoch = 1; epoch <= epochs; epoch++) {
-		for (unsigned i = 0; i < instances; i++) {
+	int testToDoInEpoch = 50;
+
+	for (unsigned epoch = 0; epoch < epochs; epoch++) {
+		int testDoneInThisEpoch = 0;
+		for (unsigned i = 1; i <= instances; i++) {
+			int stepNumber = i + epoch * instances;
 			double prediction = (hypothesis * data[i]).sum();
 			double desirablePrediction = 2 * data[i].y - 1; //always 1 or -1
 
 			double differential = getCostsDifferential(prediction * desirablePrediction);
 
-			double alpha = 2 * sqrt(log(epochs * instances) / (i + epoch * instances));
+			double learningSpeed = alphaCoefficient * sqrt(1. / (stepNumber));
 
-			hypothesis -= alpha * differential * data[i] * desirablePrediction;
+			hypothesis -= learningSpeed * differential * data[i] * desirablePrediction;
 			regularize(hypothesis);
 
 			hypothesesSum += hypothesis;
 			for (unsigned i= 0; i<discountedHypotheses.size(); i++) {
-				discountedHypotheses[i] = (discountedHypotheses[i] * discountFactors[i] + hypothesis)
-									   / (1 + discountFactors[i]);
+				double factor = min(stepNumber-1., discountFactors[i]);
+				discountedHypotheses[i] = (discountedHypotheses[i] * factor + hypothesis)
+									   / (1 + factor);
+			}
+
+			if (i >= instances*(1+testDoneInThisEpoch)/testToDoInEpoch) {
+				testDoneInThisEpoch++;
+				vector<Hypothesis> hypothesesToTest(discountedHypotheses);
+				hypothesesToTest.insert(hypothesesToTest.begin(), hypothesis);
+				hypothesesToTest.push_back(hypothesesSum/double(stepNumber));
+				performTesting(hypothesesToTest);
 			}
 		}
-		vector<Hypothesis> hypothesesToTest(discountedHypotheses);
-		hypothesesToTest.push_back(hypothesis);
-		hypothesesToTest.push_back(hypothesesSum/double(epoch*instances));
-		performTesting(hypothesesToTest);
 	}
 }
 
@@ -100,6 +111,21 @@ void BaseClassifier::regularize(Hypothesis &/*hypotesis*/)
 {
 
 }
+
+void BaseClassifier::tuneAlphaCoefficient()
+{
+
+}
+double BaseClassifier::getAlphaCoefficient() const
+{
+	return alphaCoefficient;
+}
+
+void BaseClassifier::setAlphaCoefficient(double value)
+{
+	alphaCoefficient = value;
+}
+
 
 void BaseClassifier::prepareData()
 {

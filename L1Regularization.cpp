@@ -35,3 +35,8 @@ void L1Regularization::regularize(Hypothesis &hypotesis)
 		}
 	}
 }
+
+void L1Regularization::tuneAlphaCoefficient()
+{
+	alphaCoefficient *= radius / sqrt(features);
+}

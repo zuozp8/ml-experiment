@@ -1,8 +1,10 @@
 #include "L2Regularization.hpp"
 
-L2Regularization::L2Regularization(double radius)
+L2Regularization::L2Regularization(double _radius)
 {
+	radius = _radius;
 	radiusSquared = radius * radius;
+	alphaCoefficient *= radius;
 }
 
 void L2Regularization::regularize(Hypothesis &hypotesis)
@@ -11,4 +13,9 @@ void L2Regularization::regularize(Hypothesis &hypotesis)
 	if (vectorLengthSquared > radiusSquared) {
 		hypotesis /= sqrt(vectorLengthSquared / radiusSquared);
 	}
+}
+
+void L2Regularization::tuneAlphaCoefficient()
+{
+	alphaCoefficient *= radius / sqrt(features);
 }

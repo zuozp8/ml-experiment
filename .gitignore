@@ -1,3 +1,4 @@
 experiment1*
 *.o
 out
+plot*.svg

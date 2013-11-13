@@ -30,6 +30,10 @@ public:
 	void setEpochs(const unsigned &epochs);
 	void setErrorType(const ErrorFunction &type);
 	void run();
+
+	double getAlphaCoefficient() const;
+	void setAlphaCoefficient(double value);
+
 protected:
 	//Fills data (must create bias feature)
 	virtual void readData() = 0;
@@ -55,12 +59,20 @@ protected:
 	//regularization may be performed by changing parameter passed by reference
 	virtual void regularize(Hypothesis& hypotesis);
 
+	virtual void tuneAlphaCoefficient();
+
 	//Amount of attributes and training examples
 	unsigned features, instances;
 
+	//it is multiplied by (# of step)^-1/2 to give learning speed
+	//some sources suggest it should be ||W|| / L
+	//where W is radius of the hypoteses space and L is length of longest possible gradient
+	double alphaCoefficient = 1;
+
 private:
 	unsigned epochs = 5; // number of epochs to do
-	double split = 0.8;
+	double split = 0.15; //which part of data is used for training (the rest is used for testing)
+
 	ErrorFunction type = LOGISTIC_ERROR;
 };
 

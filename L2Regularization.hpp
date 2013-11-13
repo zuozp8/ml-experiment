@@ -10,7 +10,9 @@ public:
 
 protected:
 	void regularize(Hypothesis &hypotesis);
+	void tuneAlphaCoefficient();
 
+	double radius;
 	double radiusSquared;
 };
 
